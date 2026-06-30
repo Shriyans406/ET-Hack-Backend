@@ -2,7 +2,10 @@ import sys
 import os
 import json
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
+from dotenv import load_dotenv
+
+load_dotenv()
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
@@ -23,6 +26,7 @@ def main():
     # Step 2: Decision Brief Generation
     brief = decision_brief_generator.generate_brief(args.question, retrieved_context)
 
+    now_ts = datetime.now(timezone.utc)
     # Output envelope for Person 3 UI
     payload = {
         "success": True,
@@ -35,12 +39,12 @@ def main():
             "decision_brief": brief
         },
         "message": "Decision Brief generated successfully.",
-        "timestamp": datetime.utcnow().isoformat() + "Z"
+        "timestamp": now_ts.isoformat().replace("+00:00", "Z")
     }
 
     print("\n[SUCCESS] GraphRAG Query Execution Complete!\n")
     print("--- [Structured Decision Brief Envelope for Person 3 Decision Assistant UI] ---")
-    print(json.dumps(payload, indent=2))
+    print(json.dumps(payload, default=str, indent=2))
     print("---------------------------------------------------------------------------------\n")
 
 if __name__ == "__main__":

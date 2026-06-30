@@ -2,7 +2,10 @@ import sys
 import os
 import json
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
+from dotenv import load_dotenv
+
+load_dotenv()
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
@@ -34,6 +37,7 @@ def main():
     # Run 3: Knowledge Mortality Score
     mortality = knowledge_mortality_engine.calculate_mortality_score(args.org_id, nodes, relationships)
 
+    now_ts = datetime.now(timezone.utc)
     # Consolidated envelope for Person 1 and Person 3
     payload = {
         "success": True,
@@ -45,12 +49,12 @@ def main():
             "knowledge_mortality_report": mortality
         },
         "message": "Knowledge Integrity scan completed successfully.",
-        "timestamp": datetime.utcnow().isoformat() + "Z"
+        "timestamp": now_ts.isoformat().replace("+00:00", "Z")
     }
 
     print("\n[SUCCESS] Knowledge Integrity Scan Complete!\n")
     print("--- [Consolidated Integrity Payload for Person 1 Alerts & Person 3 Dashboard] ---")
-    print(json.dumps(payload, indent=2))
+    print(json.dumps(payload, default=str, indent=2))
     print("---------------------------------------------------------------------------------\n")
 
 if __name__ == "__main__":

@@ -2,6 +2,9 @@ import sys
 import os
 import json
 import argparse
+from dotenv import load_dotenv
+
+load_dotenv()
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
@@ -16,10 +19,6 @@ def main():
     print(f"\n[*] [NeuroPlant Graph Verification] Executing Cypher Query:")
     print(f"    MATCH (n) WHERE n.org_id = '{args.org_id}' RETURN n LIMIT 25;\n")
 
-    # If mock store is empty, trigger a quick pipeline run in memory so there are nodes to inspect
-    if not graph_builder.mock_graph_store.get("nodes"):
-        ingestion_pipeline.run({"file_path": "sample.pdf", "org_id": args.org_id, "doc_id": "doc_sample_01"})
-
     # Check live Neo4j vs mock store
     connected = graph_builder._connect()
     if connected:
@@ -32,10 +31,14 @@ def main():
                 nodes = [record["n"] for record in result]
             driver.close()
             print(f"[SUCCESS] Retrieved {len(nodes)} nodes from live Neo4j:")
-            print(json.dumps([dict(n) for n in nodes], indent=2))
+            print(json.dumps([dict(n) for n in nodes], default=str, indent=2))
         except Exception as e:
             print(f"[-] Error querying live Neo4j: {e}")
     else:
+        # If mock store is empty, trigger a quick pipeline run in memory so there are nodes to inspect
+        if not graph_builder.mock_graph_store.get("nodes"):
+            ingestion_pipeline.run({"file_path": "sample.pdf", "org_id": args.org_id, "doc_id": "doc_sample_01"})
+
         print("[!] No live Neo4j detected (or NEUROPLANT_MOCK_MODE=true). Displaying persisted Graph Nodes for Org:")
         nodes_dict = graph_builder.mock_graph_store.get("nodes", {})
         org_nodes = [n for n in nodes_dict.values() if n.get("org_id") == args.org_id or "demo-org" in args.org_id][:25]
@@ -43,7 +46,7 @@ def main():
         print(f"\n[SUCCESS] Returned {len(org_nodes)} Node Records matching Cypher filter (n.org_id = '{args.org_id}'):")
         print("---------------------------------------------------------------------------------")
         for idx, node in enumerate(org_nodes, 1):
-            props = json.dumps(node.get("properties", {}))
+            props = json.dumps(node.get("properties", {}), default=str)
             print(f"({idx}) (: {node.get('type')} {{ name: '{node.get('name')}', org_id: '{args.org_id}', confidence: {node.get('confidence')}, properties: {props} }})")
         print("---------------------------------------------------------------------------------\n")
 
